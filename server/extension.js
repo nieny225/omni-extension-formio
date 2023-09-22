@@ -1,0 +1,208 @@
+// Formio_ui.ts
+import { OAIBaseComponent, OmniComponentMacroTypes, OmniComponentFlags, BlockCategory as Category } from "omni-sockets";
+function baseConvert(omniIO) {
+  return {
+    "label": omniIO.title || omniIO.name,
+    "description": omniIO.description,
+    "key": omniIO.name,
+    "input": true,
+    "defaultValue": omniIO.default
+  };
+}
+function processChoices(choices) {
+  if (Array.isArray(choices)) {
+    return choices.map((choice) => {
+      if (typeof choice === "string") {
+        return { "label": choice, "value": choice };
+      } else {
+        return { "label": choice.title || choice.value, "value": choice.value };
+      }
+    });
+  } else {
+    throw new Error("Complex choice structures not yet supported.");
+  }
+}
+function typeSpecificConvert(omniIO) {
+  if (omniIO.choices) {
+    return {
+      "type": "select",
+      "widget": "choicesjs",
+      "tableView": true,
+      "data": {
+        "values": processChoices(omniIO.choices)
+      }
+    };
+  }
+  let type = null;
+  if (omniIO.customSocket) {
+    switch (omniIO.customSocket) {
+      case "image": {
+        type = "textfield";
+      }
+    }
+  }
+  switch (omniIO.type) {
+    case "integer":
+    case "float":
+    case "number":
+      return {
+        "type": "number",
+        "validate": {
+          "min": omniIO.minimum,
+          "max": omniIO.maximum
+        }
+      };
+    case "string":
+      return {
+        "type": "textarea"
+      };
+    case "boolean":
+      return {
+        "type": "checkbox"
+      };
+    default:
+      if (type) {
+        return { type };
+      }
+      throw new Error(`No converter found for type: ${omniIO.type}`);
+  }
+}
+function convertOmniIOToFormio(omniIO) {
+  return {
+    ...baseConvert(omniIO),
+    ...typeSpecificConvert(omniIO)
+  };
+}
+var component = OAIBaseComponent.create("formio", "auto_ui").fromScratch().set("description", `This **input block** auto-generates a custom user interface for your recipe using Form.io.
+    To add UI elements into the interface, connect any input from other blocks to the *UI Connector* output of this block.
+    Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
+    Please note that adding any new connectors will reset the entire block."`).set("title", "Form Based UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.NO_EXECUTE, true).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
+component.addControl(
+  component.createControl("editMode", "boolean").set("title", "Edit Form").set("description", "Enable editing of the form").setControlType("AlpineToggleComponent").toOmniControl()
+);
+component.addControl(
+  component.createControl("source", "string").set("title", "Template").set("description", " ").setRequired(true).setControlType("AlpineLabelComponent").toOmniControl()
+).addOutput(
+  component.createOutput("any", "object", "any", { array: true }).set("title", "UI Connector").set("description", "Connect this socket to any input to create a UI element for it.").toOmniIO()
+).addControl(component.createControl("button").set("title", "Generate Interface").setControlType("AlpineButtonComponent").setCustom("buttonAction", "script").setCustom("buttonValue", "save").set("description", "Regenerates the interface.").toOmniControl()).setMacro(OmniComponentMacroTypes.EXEC, async (payload, ctx) => {
+  const input = Object.assign({}, payload, ctx.args || {});
+  console.log(
+    input
+  );
+  await ctx.app.emit("component:x-input", input);
+  return { ...input };
+}).setMacro(OmniComponentMacroTypes.ON_SAVE, async (node, recipe, ctx) => {
+  const source = node.data.source;
+  let output = node.outputs["any"];
+  if (output.connections.length === 0) {
+    return;
+  }
+  Object.keys(node.data).forEach((key) => !key.startsWith("x-omni-") && delete node.data[key]);
+  let customInputs = {};
+  let customOutputs = {};
+  const components2 = {};
+  components2["x-title"] = {
+    "label": "Recipe Title",
+    "tag": "h3",
+    "attrs": [
+      {
+        "attr": "",
+        "value": ""
+      }
+    ],
+    "content": recipe.meta.name,
+    "refreshOnChange": false,
+    "key": "x-title",
+    "type": "htmlelement",
+    "input": false,
+    "tableView": false
+  };
+  components2["x-desc"] = {
+    "label": "Recipe Description",
+    "tag": "p",
+    "attrs": [
+      {
+        "attr": "",
+        "value": ""
+      }
+    ],
+    "content": recipe.meta.description,
+    "refreshOnChange": false,
+    "key": "x-desc",
+    "type": "htmlelement",
+    "input": false,
+    "tableView": false
+  };
+  for (const conn in output.connections) {
+    const connection = output.connections[conn];
+    const targetNode = recipe.rete.nodes[connection.node];
+    const targetBlock = await ctx.app.blocks.getInstance(targetNode.name);
+    if (targetBlock) {
+      let targetIO = targetBlock.inputs[connection.input];
+      if (!targetIO) {
+        if (targetNode.inputs[connection.input] && targetNode.data["x-omni-dynamicInputs"]?.[connection.input]) {
+          targetIO = targetNode.data["x-omni-dynamicInputs"][connection.input];
+        }
+      }
+      if (targetIO) {
+        const { title, name, type, customSocket, socketOpts, description, minimum, maximum, step, choices } = targetIO;
+        const defaultValue = targetIO.default;
+        components2[name] = {
+          ...convertOmniIOToFormio({ ...targetIO, default: defaultValue })
+        };
+        let matchingConn = targetNode.inputs[connection.input]?.connections.find((e) => e.node === node.id && e.output === "any");
+        if (matchingConn) {
+          matchingConn.output = name;
+        }
+        node.outputs[name] = {};
+        node.outputs[name].connections = [{ node: targetNode.id, input: name }];
+        customOutputs[name] = customInputs[name] = {
+          title,
+          name,
+          type,
+          default: defaultValue,
+          defaultValue,
+          description,
+          minimum,
+          maximum,
+          step,
+          choices,
+          customSocket,
+          socketOpts,
+          control: {
+            type: "AlpineLabelControl"
+          }
+        };
+        node.outputs[name];
+      }
+    }
+  }
+  components2["submit"] = {
+    "label": "Run Recipe",
+    "showValidations": false,
+    "disableOnInvalid": true,
+    "tableView": true,
+    "key": "submit",
+    "type": "button",
+    "input": true
+  };
+  output.connections = [];
+  node.data["x-omni-dynamicInputs"] = customInputs;
+  node.data["x-omni-dynamicOutputs"] = customOutputs;
+  node.data.source = JSON.stringify(Object.values(components2));
+  return true;
+});
+var CustomUIComponent = component.toJSON();
+var Formio_ui_default = CustomUIComponent;
+
+// extension.ts
+var components = [Formio_ui_default];
+var extension_default = {
+  createComponents: () => ({
+    blocks: components,
+    patches: []
+  })
+};
+export {
+  extension_default as default
+};
