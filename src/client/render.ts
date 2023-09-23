@@ -56,14 +56,9 @@ const build = async () => {
   const result =  (await sdk.runExtensionScript('recipe',  {recipe:sdk.args.recipe}))
 
   const ui:any = Object.values(result.recipe.rete.nodes).find((n:any) => n.name === 'omni-extension-formio:formio.auto_ui')
-  const myForm: any =  {
-    alerts: {
-      submitMessage: ''
-    }
+  const myForm: any = typeof (ui.data.source) === 'string' ? JSON.parse(ui.data.source ||  {}) : ui.data.source ||  {}
 
 
-  }
-  myForm.components = JSON.parse( ui.data.source.trim() || "[]")
   const theForm = await Formio.createForm(document.getElementById('formio'), myForm);
 
   theForm.on('submit', async (ev) => {

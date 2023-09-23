@@ -11,6 +11,8 @@ declare global {
   interface Window {
     ace: any;
     Ace: any;
+    fioBuilder: any
+    fioSave: any
   }
 }
 
@@ -43,7 +45,9 @@ window.ace = Ace;
 window.Ace = Ace;
 
  const form:any =  {
+
   builder: {
+
     premium: false,
     data: false,
     custom: {
@@ -75,11 +79,7 @@ const boot = async () =>
   const result =  (await sdk.runExtensionScript('recipe',  {recipe:sdk.args.recipe}))
 
   const ui:any = Object.values(result.recipe.rete.nodes).find((n:any) => n.name === 'omni-extension-formio:formio.auto_ui')
-  const myForm:any =  {
-
-  }
-  myForm.components = JSON.parse( ui.data.source || "[]")
-
+  const myForm:any = ui.data.source  || {}
 
 Object.values(myForm.components).forEach((v:any) =>
   {
@@ -95,14 +95,19 @@ Object.values(myForm.components).forEach((v:any) =>
 
 //@ts-ignore
 Formio.builder(document.getElementById('builder'), myForm,form).then(function(builder) {
-  builder.on('saveComponent', async function() {
+  window.fioBuilder = builder
+  builder.on('saveComponent', function() {
 
 
-    const result =  (await sdk.runExtensionScript('saveEdits',  {schema:builder.schema}))
 
     console.log(builder.schema);
   });
 });
+}
+
+window.fioSave = async ()=>
+{
+  const result =  (await sdk.runExtensionScript('saveEdits',  {recipe: sdk.args.recipe,  schema:window.fioBuilder.schema}))
 }
 
 boot()

@@ -76,12 +76,12 @@ function convertOmniIOToFormio(omniIO) {
 var component = OAIBaseComponent.create("formio", "auto_ui").fromScratch().set("description", `This **input block** auto-generates a custom user interface for your recipe using Form.io.
     To add UI elements into the interface, connect any input from other blocks to the *UI Connector* output of this block.
     Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
-    Please note that adding any new connectors will reset the entire block."`).set("title", "Form Based UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.NO_EXECUTE, true).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
+    Please note that adding any new connectors will reset the entire block."`).set("title", "Form.io Auto UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.NO_EXECUTE, true).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
 component.addControl(
   component.createControl("editMode", "boolean").set("title", "Edit Form").set("description", "Enable editing of the form").setControlType("AlpineToggleComponent").toOmniControl()
 );
 component.addControl(
-  component.createControl("source", "string").set("title", "Template").set("description", " ").setRequired(true).setControlType("AlpineLabelComponent").toOmniControl()
+  component.createControl("source", "object").set("title", "Template").set("description", " ").setRequired(true).setControlType("AlpineCodeMirrorComponent").toOmniControl()
 ).addOutput(
   component.createOutput("any", "object", "any", { array: true }).set("title", "UI Connector").set("description", "Connect this socket to any input to create a UI element for it.").toOmniIO()
 ).addControl(component.createControl("button").set("title", "Generate Interface").setControlType("AlpineButtonComponent").setCustom("buttonAction", "script").setCustom("buttonValue", "save").set("description", "Regenerates the interface.").toOmniControl()).setMacro(OmniComponentMacroTypes.EXEC, async (payload, ctx) => {
@@ -189,7 +189,7 @@ component.addControl(
   output.connections = [];
   node.data["x-omni-dynamicInputs"] = customInputs;
   node.data["x-omni-dynamicOutputs"] = customOutputs;
-  node.data.source = JSON.stringify(Object.values(components2));
+  node.data.source = { components: Object.values(components2) };
   return true;
 });
 var CustomUIComponent = component.toJSON();

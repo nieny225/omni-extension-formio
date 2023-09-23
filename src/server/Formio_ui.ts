@@ -106,7 +106,7 @@ let component = OAIBaseComponent
     To add UI elements into the interface, connect any input from other blocks to the *UI Connector* output of this block.
     Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
     Please note that adding any new connectors will reset the entire block."`)
-  .set('title', 'Form Based UI')
+  .set('title', 'Form.io Auto UI')
   .set('category', Category.USER_INTERFACE)
   .setFlag(OmniComponentFlags.NO_EXECUTE, true)
   .setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true)
@@ -124,11 +124,11 @@ let component = OAIBaseComponent
 
   component
   .addControl(
-    component.createControl('source', 'string')
+    component.createControl('source', 'object')
       .set('title', "Template")
       .set('description', ' ')
       .setRequired(true)
-      .setControlType('AlpineLabelComponent')
+      .setControlType('AlpineCodeMirrorComponent')
       .toOmniControl())
 
    .addOutput(
@@ -341,7 +341,7 @@ let component = OAIBaseComponent
 
     node.data["x-omni-dynamicInputs"] =  customInputs
     node.data["x-omni-dynamicOutputs"] =  customOutputs
-    node.data.source = JSON.stringify(Object.values(components))
+    node.data.source = {components: Object.values(components)}
     return true
 
    })
