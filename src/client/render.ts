@@ -66,6 +66,8 @@ const build = async () => {
     const args = ev.data
     delete args.submit
 
+    console.log("args",args)
+
     const payload:any = {
       action: 'run',
       args: args

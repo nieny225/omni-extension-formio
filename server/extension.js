@@ -101,6 +101,8 @@ component.addControl(
   let customInputs = {};
   let customOutputs = {};
   const components2 = {};
+  const inputComponents = {};
+  const outputComponents = {};
   components2["x-title"] = {
     "label": "Recipe Title",
     "tag": "h3",
@@ -147,7 +149,7 @@ component.addControl(
       if (targetIO) {
         const { title, name, type, customSocket, socketOpts, description, minimum, maximum, step, choices } = targetIO;
         const defaultValue = targetIO.default;
-        components2[name] = {
+        inputComponents[name] = {
           ...convertOmniIOToFormio({ ...targetIO, default: defaultValue })
         };
         let matchingConn = targetNode.inputs[connection.input]?.connections.find((e) => e.node === node.id && e.output === "any");
@@ -177,19 +179,76 @@ component.addControl(
       }
     }
   }
-  components2["submit"] = {
-    "label": "Run Recipe",
-    "showValidations": false,
-    "disableOnInvalid": true,
-    "tableView": true,
-    "key": "submit",
-    "type": "button",
-    "input": true
-  };
   output.connections = [];
   node.data["x-omni-dynamicInputs"] = customInputs;
   node.data["x-omni-dynamicOutputs"] = customOutputs;
-  node.data.source = { components: Object.values(components2) };
+  outputComponents["outputContent"] = {
+    "label": "HTML",
+    "tag": "div",
+    "content": "Results will show up here!",
+    "attrs": [
+      {
+        "attr": "id",
+        "value": "outputContent"
+      }
+    ],
+    "refreshOnChange": false,
+    "key": "outputContent",
+    "type": "htmlelement",
+    "input": false,
+    "tableView": false
+  };
+  const finalTree = {};
+  finalTree.components = Object.values(components2);
+  finalTree.components.push(
+    {
+      "input": false,
+      "key": "tabs",
+      "label": "Tabs",
+      "tableView": false,
+      "type": "tabs",
+      components: [
+        {
+          components: Object.values(inputComponents),
+          "key": "inputs",
+          "label": "Inputs"
+        },
+        {
+          components: Object.values(outputComponents),
+          "key": "outputs",
+          "label": "Outputs"
+        }
+      ]
+    }
+  );
+  finalTree.components.push(
+    {
+      "label": "HTML",
+      "tag": "div",
+      "content": "&nbsp;",
+      "attrs": [
+        {
+          "attr": "",
+          "value": ""
+        }
+      ],
+      "refreshOnChange": false,
+      "key": "html",
+      "type": "htmlelement",
+      "input": false,
+      "tableView": false
+    },
+    {
+      "label": "Run Recipe",
+      "showValidations": false,
+      "disableOnInvalid": true,
+      "tableView": true,
+      "key": "submit",
+      "type": "button",
+      "input": true
+    }
+  );
+  node.data.source = finalTree;
   return true;
 });
 var CustomUIComponent = component.toJSON();
