@@ -182,8 +182,8 @@ component.addControl(
   output.connections = [];
   node.data["x-omni-dynamicInputs"] = customInputs;
   node.data["x-omni-dynamicOutputs"] = customOutputs;
-  outputComponents["outputContent"] = {
-    "label": "HTML",
+  outputComponents["x-outputContent"] = {
+    "label": "Results Pane",
     "tag": "div",
     "content": "Results will show up here!",
     "attrs": [
@@ -193,7 +193,7 @@ component.addControl(
       }
     ],
     "refreshOnChange": false,
-    "key": "outputContent",
+    "key": "x-outputContent",
     "type": "htmlelement",
     "input": false,
     "tableView": false

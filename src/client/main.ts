@@ -74,29 +74,52 @@ window.Ace = Ace;
   }
 }
 
+
+const addComponents = (components: any, form:any) =>
+{
+
+    Object.values(components).forEach((v:any) =>
+    {
+      addComponent(form, v)
+      if (v.components)
+      {
+        addComponents(v.components, form)
+      }
+    })
+}
+
+const addComponent = (form:any, component:any) =>
+{    
+  const key = component.key
+  if (['tabs', 'inputs', 'outputs'].includes(key))
+  {
+    return
+  }
+
+  form.builder.custom.components[key] =
+  {
+    title: component.label,
+    key: component.key,
+    icon: 'terminal',
+    schema: component
+  }
+
+}
+
 const boot = async () =>
 {
   const result =  (await sdk.runExtensionScript('recipe',  {recipe:sdk.args.recipe}))
 
   const ui:any = Object.values(result.recipe.rete.nodes).find((n:any) => n.name === 'omni-extension-formio:formio.auto_ui')
-  const myForm:any = ui.data.source  || {}
+  const data:any = ui.data.source  || {}
 
-Object.values(myForm.components).forEach((v:any) =>
-  {
-    form.builder.custom.components[v.key] =
-    {
-      title: v.label,
-      key: v.key,
-      icon: 'terminal',
-      schema: v
-    }
-  }
-)
+  addComponents(data.components, form)
+
 
 //@ts-ignore
-Formio.builder(document.getElementById('builder'), myForm,form).then(function(builder) {
-  window.fioBuilder = builder
-  builder.on('saveComponent', function() {
+Formio.builder(document.getElementById('builder'), data,form).then(function(builder) {
+window.fioBuilder = builder
+builder.on('saveComponent', function() {
 
 
 

@@ -334,8 +334,8 @@ let component = OAIBaseComponent
     node.data["x-omni-dynamicInputs"] =  customInputs
     node.data["x-omni-dynamicOutputs"] =  customOutputs
 
-    outputComponents["outputContent"] = {
-        "label": "HTML",
+    outputComponents["x-outputContent"] = {
+        "label": "Results Pane",
         "tag": "div",
         "content": "Results will show up here!",
         "attrs": [
@@ -345,7 +345,7 @@ let component = OAIBaseComponent
             }
         ],
         "refreshOnChange": false,
-        "key": "outputContent",
+        "key": "x-outputContent",
         "type": "htmlelement",
         "input": false,
         "tableView": false
