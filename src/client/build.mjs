@@ -16,7 +16,7 @@ const ejsPlugin = {
   
         // Convert the rendered content to a module that exports the rendered string.
         const jsCode = `export default ${JSON.stringify(renderedContent)};`;
-        console.log(jsCode);
+     
         return {
           contents: jsCode,
           loader: 'js',

@@ -14,8 +14,10 @@ function processChoices(choices) {
     return choices.map((choice) => {
       if (typeof choice === "string") {
         return { "label": choice, "value": choice };
-      } else {
+      } else if (choice.value) {
         return { "label": choice.title || choice.value, "value": choice.value };
+      } else {
+        console.warn("Not implemented choice format");
       }
     });
   } else {
@@ -138,12 +140,6 @@ component.addControl(
       }
     }
   }));
-  console.log(
-    "formio run",
-    ctx.node.data,
-    payloadValue
-  );
-  ctx.args = payloadValue;
   await ctx.app.emit("component:x-input", payloadValue);
   return { ...payloadValue };
 });
