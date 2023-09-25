@@ -3,9 +3,10 @@
  * All rights reserved.
  */
 //@ts-ignore
-import {  OAIBaseComponent, WorkerContext, OmniComponentMacroTypes, OmniComponentFlags, BlockCategory as Category,type OmniIO } from 'omni-sockets'
+import {  OAIBaseComponent, WorkerContext, OmniComponentMacroTypes, OmniComponentFlags, BlockCategory as Category,type OmniIO, OAIComponent31 } from 'omni-sockets'
 //@ts-ignore
 import { Workflow } from 'omni-shared'
+import { OmniResource } from 'omni-sdk/lib/Resources/OmniResource';
 // Define base conversion function for shared properties
 function baseConvert(omniIO: Partial<OmniIO>) {
   return {
@@ -13,7 +14,8 @@ function baseConvert(omniIO: Partial<OmniIO>) {
       "description": omniIO.description,
       "key": omniIO.name,
       "input": true,
-      "defaultValue": omniIO.default
+      "defaultValue": omniIO.default,
+
   };
 }
 
@@ -47,12 +49,34 @@ function typeSpecificConvert(omniIO: Partial<OmniIO>) {
       };
   }
   let type:any = null
+  let props = {}
   if (omniIO.customSocket)
   {
     switch(omniIO.customSocket) {
       case 'image':
       {
-        type = 'textfield'
+        type = 'file'
+
+        props = {
+          "applyMaskOn": "change",
+          "capture": false,
+          "fileTypes": [
+            {
+              "label": "",
+              "value": ""
+            }
+          ],
+          "image": true,
+          "imageSize": "256",
+          "input": true,
+
+          // Default to the custom base64 storage provider
+          "storage": "b64-fixed-storage-provider",
+
+          "type": "file",
+          "webcam": true
+        }
+
       }
 
     }
@@ -63,6 +87,7 @@ function typeSpecificConvert(omniIO: Partial<OmniIO>) {
       case 'float':
       case 'number':
           return {
+            ...props,
               "type": "number",
               "validate": {
                   "min": omniIO.minimum,
@@ -71,16 +96,21 @@ function typeSpecificConvert(omniIO: Partial<OmniIO>) {
           };
       case 'string':
           return {
-              "type": "textarea"
+            ...props,
+              "type": "textarea",
+              "placeholder": omniIO.default
           };
       case 'boolean':
           return {
+              ...props,
               "type": "checkbox"
           };
       default:
           if (type)
           {
-            return {type}
+            return {
+              ...props,
+              type}
           }
           throw new Error(`No converter found for type: ${omniIO.type}`);
   }
@@ -108,7 +138,7 @@ let component = OAIBaseComponent
     Please note that adding any new connectors will reset the entire block."`)
   .set('title', 'Form.io Auto UI')
   .set('category', Category.USER_INTERFACE)
-  .setFlag(OmniComponentFlags.NO_EXECUTE, true)
+  //.setFlag(OmniComponentFlags.NO_EXECUTE, true)
   .setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true)
   .setMethod('X-CUSTOM')
   .setRenderTemplate('simple')
@@ -121,6 +151,16 @@ let component = OAIBaseComponent
     .setControlType('AlpineToggleComponent')
     .toOmniControl()
   )
+
+  component.addControl(
+    component.createControl('enableUI', 'boolean')
+    .set('title', 'Enable UI')
+    .set('description', 'Enables / Disables the automatic popup of the UI')
+    .setDefault(true)
+    .setControlType('AlpineToggleComponent')
+    .toOmniControl()
+  )
+
 
   component
   .addControl(
@@ -151,25 +191,70 @@ let component = OAIBaseComponent
 
 
 
-   .setMacro(OmniComponentMacroTypes.EXEC, async (payload: any, ctx: WorkerContext) => {
-    const input = Object.assign({}, payload, ctx.args || {})
+   .setMacro(OmniComponentMacroTypes.EXEC, async (payload: any, ctx: WorkerContext, component: OAIComponent31) => {
+    const payloadValue= Object.assign({}, ctx.args, payload || {})
 
-    console.log(
-      input
+    // Transform the file upload values from formio to a CDN Object
+    const inputs = component.enumerateInputs(ctx.node) 
+    await Promise.all(Object.keys(inputs).map(async (key:string) => {
+      debugger;
+      const input:OmniIO = inputs[key]
+      if (input.customSocket)
+      {
+       
+      // For any file socket...
+      if (["file", "image", "video", "audio", "document"].includes(input.customSocket)) {
+        if (payloadValue[key] !== null)
+        {
+          const files: OmniResource[] = []
+          for (const file of payloadValue[key])
+          {
+            // If it comes from the base64 storage
+            if (file.storage=== "b64-fixed-storage-provider")
+            {
+              // Write it to file manager and return the results
+              const cdn_response:OmniResource = await ctx.app.cdn.putTemp(file.url, {
+                mimeType: file.type,
+                fileName: file.name,
+                userId: ctx.userId,
+                jobId: ctx.jobId
+              });
+              files.push(cdn_response);
+            }
+          }
+          payloadValue[key] = files
+        }          
+      }
+      }
+
+
+    }));
+
+
+    console.log( 'formio run',
+      ctx.node.data,
+      payloadValue
     )
-
-    await ctx.app.emit('component:x-input', input)
-    return { ...input } // Include JSON output if applicable
+    //@ts-ignore
+    // We are updating the args here too so downstream blocks, such as chatInput can handle them
+    ctx.args = payloadValue
+    await ctx.app.emit('component:x-input', payloadValue)
+    return { ...payloadValue } // Include JSON output if applicable
   })
+
+
+
 
 
     // The custom_ui block scans for all inputs attached to the any output and creates a
     // custom input for each one.  The custom input is stored in the x-omni-dynamicInputs
     // property of the node data.
 
-   .setMacro(OmniComponentMacroTypes.ON_SAVE, async (node: any,  recipe: Workflow, ctx: {app: any, userId: string}) => {
+   component.setMacro(OmniComponentMacroTypes.ON_SAVE, async (node: any,  recipe: Workflow, ctx: {app: any, userId: string, inputs:any}) => {
 
-    const source = node.data.source
+
+
+
     let output = node.outputs["any"]
     if (output.connections.length === 0)
     {
@@ -363,13 +448,13 @@ let component = OAIBaseComponent
         components: [
           {
             components: Object.values(inputComponents),
-            "key": "inputs",
+            "key": "x-inputs",
             "label": "Inputs"
           },
           {
             components: Object.values(outputComponents),
-            "key": "outputs",
-            "label": "Outputs"
+            "key": "x-results",
+            "label": "Results"
           }
         ]
       })

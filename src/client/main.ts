@@ -3,10 +3,41 @@ import {OmniSDKClient} from 'omni-sdk';
 const sdk = new OmniSDKClient("omni-extension-formio").init();
 import './reset.css'
 import './node_modules/bootstrap/dist/css/bootstrap.min.css'
-import './node_modules/@formio/js/dist/formio.full.min.css'
+import  './node_modules/@formio/js/dist/formio.full.min.css'
 import './style.css'
 //@ts-ignore
-import { Formio } from '@formio/js';
+import { Formio,Providers } from '@formio/js';
+import ImageDraw from './ImageDraw.mjs';
+import FidStorage from './FidStorageProvider.mjs'
+import Base64Storage from './FixedBase64Provider.mjs'
+
+
+Providers.addProvider("storage","b64-fixed-storage-provider",Base64Storage)
+
+Providers.addProvider("storage","fid-storage-provider",FidStorage)
+
+//@ts-ignore
+import template from './ImageDraw.ejs';
+console.log(template)
+const plugin =
+{
+  components: {
+    imagedraw: ImageDraw},
+    templates:
+    {
+      boostrap:
+      {
+        imagedraw: {
+          form: template
+        }
+      }
+  
+    }
+}
+
+Formio.use(plugin) 
+
+
 declare global {
   interface Window {
     ace: any;
@@ -91,7 +122,7 @@ const addComponents = (components: any, form:any) =>
 const addComponent = (form:any, component:any) =>
 {    
   const key = component.key
-  if (['tabs', 'inputs', 'outputs'].includes(key))
+  if (['tabs', 'x-inputs', 'x-results'].includes(key))
   {
     return
   }

@@ -4,11 +4,32 @@ const sdk = new OmniSDKClient("omni-extension-formio").init();
 import './reset.css'
 import './node_modules/bootstrap/dist/css/bootstrap.min.css'
 import './node_modules/@formio/js/dist/formio.form.min.js'
-import './node_modules/@formio/js/dist/formio.form.min.css'
+//import './node_modules/@formio/js/dist/formio.form.min.css'
+import  './node_modules/@formio/js/dist/formio.full.min.css'
 import './style.css'
 
 //@ts-ignore
-import { Formio } from '@formio/js';
+import { Formio, Providers } from '@formio/js';
+import ImageDraw from './ImageDraw.mjs';
+import FidStorage from './FidStorageProvider.mjs'
+
+import Base64Storage from './FixedBase64Provider.mjs'
+
+
+Providers.addProvider("storage","b64-fixed-storage-provider",Base64Storage)
+
+Providers.addProvider("storage","fid-storage-provider",FidStorage)
+//@ts-ignore
+import template from './ImageDraw.ejs';
+Formio.use({components: {
+  imagedraw: ImageDraw},
+  templates:
+  {
+    imagedraw: template
+  }
+}) 
+
+
 declare global {
   interface Window {
 

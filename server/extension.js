@@ -34,10 +34,28 @@ function typeSpecificConvert(omniIO) {
     };
   }
   let type = null;
+  let props = {};
   if (omniIO.customSocket) {
     switch (omniIO.customSocket) {
       case "image": {
-        type = "textfield";
+        type = "file";
+        props = {
+          "applyMaskOn": "change",
+          "capture": false,
+          "fileTypes": [
+            {
+              "label": "",
+              "value": ""
+            }
+          ],
+          "image": true,
+          "imageSize": "256",
+          "input": true,
+          // Default to the custom base64 storage provider
+          "storage": "b64-fixed-storage-provider",
+          "type": "file",
+          "webcam": true
+        };
       }
     }
   }
@@ -46,6 +64,7 @@ function typeSpecificConvert(omniIO) {
     case "float":
     case "number":
       return {
+        ...props,
         "type": "number",
         "validate": {
           "min": omniIO.minimum,
@@ -54,15 +73,21 @@ function typeSpecificConvert(omniIO) {
       };
     case "string":
       return {
-        "type": "textarea"
+        ...props,
+        "type": "textarea",
+        "placeholder": omniIO.default
       };
     case "boolean":
       return {
+        ...props,
         "type": "checkbox"
       };
     default:
       if (type) {
-        return { type };
+        return {
+          ...props,
+          type
+        };
       }
       throw new Error(`No converter found for type: ${omniIO.type}`);
   }
@@ -76,23 +101,53 @@ function convertOmniIOToFormio(omniIO) {
 var component = OAIBaseComponent.create("formio", "auto_ui").fromScratch().set("description", `This **input block** auto-generates a custom user interface for your recipe using Form.io.
     To add UI elements into the interface, connect any input from other blocks to the *UI Connector* output of this block.
     Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
-    Please note that adding any new connectors will reset the entire block."`).set("title", "Form.io Auto UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.NO_EXECUTE, true).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
+    Please note that adding any new connectors will reset the entire block."`).set("title", "Form.io Auto UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
 component.addControl(
   component.createControl("editMode", "boolean").set("title", "Edit Form").set("description", "Enable editing of the form").setControlType("AlpineToggleComponent").toOmniControl()
+);
+component.addControl(
+  component.createControl("enableUI", "boolean").set("title", "Enable UI").set("description", "Enables / Disables the automatic popup of the UI").setDefault(true).setControlType("AlpineToggleComponent").toOmniControl()
 );
 component.addControl(
   component.createControl("source", "object").set("title", "Template").set("description", " ").setRequired(true).setControlType("AlpineCodeMirrorComponent").toOmniControl()
 ).addOutput(
   component.createOutput("any", "object", "any", { array: true }).set("title", "UI Connector").set("description", "Connect this socket to any input to create a UI element for it.").toOmniIO()
-).addControl(component.createControl("button").set("title", "Generate Interface").setControlType("AlpineButtonComponent").setCustom("buttonAction", "script").setCustom("buttonValue", "save").set("description", "Regenerates the interface.").toOmniControl()).setMacro(OmniComponentMacroTypes.EXEC, async (payload, ctx) => {
-  const input = Object.assign({}, payload, ctx.args || {});
+).addControl(component.createControl("button").set("title", "Generate Interface").setControlType("AlpineButtonComponent").setCustom("buttonAction", "script").setCustom("buttonValue", "save").set("description", "Regenerates the interface.").toOmniControl()).setMacro(OmniComponentMacroTypes.EXEC, async (payload, ctx, component2) => {
+  const payloadValue = Object.assign({}, ctx.args, payload || {});
+  const inputs = component2.enumerateInputs(ctx.node);
+  await Promise.all(Object.keys(inputs).map(async (key) => {
+    debugger;
+    const input = inputs[key];
+    if (input.customSocket) {
+      if (["file", "image", "video", "audio", "document"].includes(input.customSocket)) {
+        if (payloadValue[key] !== null) {
+          const files = [];
+          for (const file of payloadValue[key]) {
+            if (file.storage === "b64-fixed-storage-provider") {
+              const cdn_response = await ctx.app.cdn.putTemp(file.url, {
+                mimeType: file.type,
+                fileName: file.name,
+                userId: ctx.userId,
+                jobId: ctx.jobId
+              });
+              files.push(cdn_response);
+            }
+          }
+          payloadValue[key] = files;
+        }
+      }
+    }
+  }));
   console.log(
-    input
+    "formio run",
+    ctx.node.data,
+    payloadValue
   );
-  await ctx.app.emit("component:x-input", input);
-  return { ...input };
-}).setMacro(OmniComponentMacroTypes.ON_SAVE, async (node, recipe, ctx) => {
-  const source = node.data.source;
+  ctx.args = payloadValue;
+  await ctx.app.emit("component:x-input", payloadValue);
+  return { ...payloadValue };
+});
+component.setMacro(OmniComponentMacroTypes.ON_SAVE, async (node, recipe, ctx) => {
   let output = node.outputs["any"];
   if (output.connections.length === 0) {
     return;
@@ -210,13 +265,13 @@ component.addControl(
       components: [
         {
           components: Object.values(inputComponents),
-          "key": "inputs",
+          "key": "x-inputs",
           "label": "Inputs"
         },
         {
           components: Object.values(outputComponents),
-          "key": "outputs",
-          "label": "Outputs"
+          "key": "x-results",
+          "label": "Results"
         }
       ]
     }
