@@ -4,6 +4,9 @@
   "scripts": {
     "build": "node ./build.mjs"
   },
+  "externals": [
+    "omni-sdk"
+  ],
   "devDependencies": {
     "esbuild": "^0.18.4",
     "esbuild-sass-plugin": "^2.10.0",
@@ -12,7 +15,6 @@
   "dependencies": {
     "@formio/js": "^5.0.0-rc.27",
     "@popperjs/core": "^2.11.8",
-    "ace-builds": "^1.27.0",
-    "omni-sdk": "link:../../../../omni-sdk/"
+    "ace-builds": "^1.27.0"
   }
 }
