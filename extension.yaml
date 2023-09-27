@@ -7,3 +7,6 @@ supports:
   - "blocks:v2"
 client:
   addToWorkbench: true
+  winbox:
+    x: "center"
+    y: "center"
