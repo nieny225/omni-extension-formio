@@ -196,7 +196,7 @@ component
 
 
   .setMacro(OmniComponentMacroTypes.EXEC, async (payload: any, ctx: WorkerContext, component: OAIComponent31) => {
-    const payloadValue = Object.assign({}, ctx.args, payload || {})
+    const payloadValue = Object.assign({}, payload, ctx.args)
 
     // Transform the file upload values from formio to a CDN Object
     const inputs = component.enumerateInputs(ctx.node)

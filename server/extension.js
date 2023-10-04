@@ -115,7 +115,7 @@ component.addControl(
 ).addOutput(
   component.createOutput("any", "object", "any", { array: true }).set("title", "UI Connector").set("description", "Connect this socket to any input to create a UI element for it.").toOmniIO()
 ).addControl(component.createControl("button").set("title", "Generate Interface").setControlType("AlpineButtonComponent").setCustom("buttonAction", "script").setCustom("buttonValue", "save").set("description", "Regenerates the interface.").toOmniControl()).setMacro(OmniComponentMacroTypes.EXEC, async (payload, ctx, component2) => {
-  const payloadValue = Object.assign({}, ctx.args, payload || {});
+  const payloadValue = Object.assign({}, payload, ctx.args);
   const inputs = component2.enumerateInputs(ctx.node);
   await Promise.all(Object.keys(inputs).map(async (key) => {
     debugger;
