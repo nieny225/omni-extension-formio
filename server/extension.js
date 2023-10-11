@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2023 MERCENARIES.AI PTE. LTD.
+ * All rights reserved.
+ */
+
 // Formio_ui.ts
 import { OAIBaseComponent, OmniComponentMacroTypes, OmniComponentFlags, BlockCategory as Category } from "omni-sockets";
 function baseConvert(omniIO) {

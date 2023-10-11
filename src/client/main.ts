@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2023 MERCENARIES.AI PTE. LTD.
+ * All rights reserved.
+ */
+
 //import './css/bootstrap-icons_font_bootstrap-icons.css'
 import {OmniSDKClient} from 'omni-sdk';
 const sdk = new OmniSDKClient("omni-extension-formio").init();
