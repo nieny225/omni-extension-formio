@@ -1,8 +1,3 @@
-/**
- * Copyright (c) 2023 MERCENARIES.AI PTE. LTD.
- * All rights reserved.
- */
-
 // Formio_ui.ts
 import { OAIBaseComponent, OmniComponentMacroTypes, OmniComponentFlags, BlockCategory as Category } from "omni-sockets";
 function baseConvert(omniIO) {
@@ -108,7 +103,7 @@ function convertOmniIOToFormio(omniIO) {
 var component = OAIBaseComponent.create("formio", "auto_ui").fromScratch().set("description", `This **input block** auto-generates a custom user interface for your recipe using Form.io.
     To add UI elements into the interface, connect any input from other blocks to the *UI Connector* output of this block.
     Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
-    Please note that adding any new connectors will reset the entire block."`).set("title", "Form.io Auto UI").set("category", Category.USER_INTERFACE).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
+    Please note that adding any new connectors will reset the entire block."`).set("title", "Form.io Auto UI").set("category", Category.INPUT_OUTPUT).setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true).setMethod("X-CUSTOM").setRenderTemplate("simple");
 component.addControl(
   component.createControl("editMode", "boolean").set("title", "Edit Form").set("description", "Enable editing of the form").setControlType("AlpineToggleComponent").toOmniControl()
 );

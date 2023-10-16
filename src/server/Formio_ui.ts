@@ -141,7 +141,7 @@ let component = OAIBaseComponent
     Build the UI, press the Generate Button. You can also toggle on **Edit Mode**, giving you access to a full form-builder for any connected inputs.
     Please note that adding any new connectors will reset the entire block."`)
   .set('title', 'Form.io Auto UI')
-  .set('category', Category.USER_INTERFACE)
+  .set('category', Category.INPUT_OUTPUT)
   //.setFlag(OmniComponentFlags.NO_EXECUTE, true)
   .setFlag(OmniComponentFlags.UNIQUE_PER_WORKFLOW, true)
   .setMethod('X-CUSTOM')
